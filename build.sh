@@ -46,7 +46,14 @@ diff ../xgp.config .config || true
 
 # qmodem 默认配置
 echo "== apply qmodem default setting =="
-cat feeds/qmodem/application/qmodem/files/etc/config/qmodem > files/etc/config/qmodem
+mkdir -p files/etc/config
+QMODEM_CFG="feeds/qmodem/application/qmodem/files/etc/config/qmodem"
+if [ -f "$QMODEM_CFG" ]; then
+    cat "$QMODEM_CFG" > files/etc/config/qmodem
+else
+    echo "  WARN: $QMODEM_CFG not found, seeding minimal qmodem config"
+    printf "config qmodem 'main'\n\toption start_delay '15'\n" > files/etc/config/qmodem
+fi
 cat >> files/etc/config/qmodem << 'EOF'
 
 config modem-slot 'wwan'
