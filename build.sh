@@ -90,8 +90,41 @@ echo "ZZ_BUILD_DATE='${zz_build_date}'" >> files/etc/zz_build_id
 echo "ZZ_BUILD_REPO_HASH='$(cd .. && git rev-parse HEAD 2>/dev/null || echo unknown)'" >> files/etc/zz_build_id
 echo "ZZ_BUILD_LEDE_HASH='$(git rev-parse HEAD)'" >> files/etc/zz_build_id
 
-echo "== make download =="
-make download -j8 || { echo "download failed"; exit 1; }
+# ---------------------------------------------------------------------------
+# [修复] 已知下载源问题：
+#  - erofs-utils (tools) 源码来自 git.kernel.org，GitHub Actions 上经常超时
+#  - haproxy (feeds/packages) 源码来自 www.haproxy.org，也可能瞬断
+# 处理：erofs-utils 换 GitHub 镜像并动态重算 hash；其余靠下面的下载重试兜底。
+# ---------------------------------------------------------------------------
+echo "== fix problematic download sources =="
+EROF_MK="tools/erofs-utils/Makefile"
+if [ -f "$EROF_MK" ]; then
+    EROF_URL="https://github.com/erofs/erofs-utils/archive/refs/tags/v1.8.10.tar.gz"
+    # 用 GitHub 镜像下载 tarball 并计算真实 sha256，写回 Makefile，保证 hash 匹配
+    if curl -fsSL --retry 3 --max-time 120 "$EROF_URL" -o /tmp/erofs-utils-1.8.10.tar.gz; then
+        EROF_HASH=$(sha256sum /tmp/erofs-utils-1.8.10.tar.gz | awk '{print $1}')
+        sed -i "s|^PKG_SOURCE_URL:=.*|PKG_SOURCE_URL:=https://github.com/erofs/erofs-utils/archive/refs/tags/|" "$EROF_MK"
+        sed -i "s|^PKG_SOURCE:=.*|PKG_SOURCE:=v1.8.10.tar.gz|" "$EROF_MK"
+        sed -i "s|^PKG_HASH:=.*|PKG_HASH:=${EROF_HASH}|" "$EROF_MK"
+        echo "  erofs-utils -> GitHub mirror, hash ${EROF_HASH:0:12}..."
+    else
+        echo "  WARN: cannot fetch erofs-utils GitHub mirror, keep original source"
+    fi
+    rm -f /tmp/erofs-utils-1.8.10.tar.gz
+fi
+
+echo "== make download (with retry, low concurrency) =="
+DL_OK=0
+for attempt in 1 2 3; do
+    echo "  download attempt $attempt/3"
+    if make download -j4; then
+        DL_OK=1
+        break
+    fi
+    echo "  download attempt $attempt failed, retrying..."
+    sleep 10
+done
+[ "$DL_OK" -eq 1 ] || { echo "ERROR: make download failed after 3 attempts"; exit 1; }
 
 # ---------------------------------------------------------------------------
 # [新增 1] 安装 TD-TECH 内核补丁（标准 patches 目录机制，动态适配内核版本）
