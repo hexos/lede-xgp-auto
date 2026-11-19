@@ -17,17 +17,9 @@ jobs:
           df -h
           lsblk
           free -h
-      - name: Maximize build space
-        uses: easimon/maximize-build-space@master
-        with:
-          root-reserve-mb: 10240
-          swap-size-mb: 1024
-          remove-dotnet: 'false'
-      - name: Check build space after maximize-build-space
-        run: |
-          df -h
-          lsblk
-          free -h
+      # 移除 easimon/maximize-build-space：新版 ubuntu-24.04 镜像根分区原生就有 ~89G 可用，
+      # 单设备 LEDE 编译足够；该 action 反而把根分区可写空间压到 ~100M，导致 apt 装依赖时
+      # "No space left on device"（texlive 等包写入 /usr 失败）。
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Setup environment
