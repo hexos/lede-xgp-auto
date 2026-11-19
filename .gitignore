@@ -1,0 +1,4 @@
+lede/
+release_assets/
+release_info.md
+*.img.gz
