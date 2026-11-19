@@ -1,0 +1,6 @@
+# 强制 LF 换行，避免 GitHub Actions 上 shell 脚本出现 ^M / bad interpreter
+* text=auto eol=lf
+*.sh text eol=lf
+*.patch text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
