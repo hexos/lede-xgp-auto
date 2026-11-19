@@ -63,6 +63,15 @@ cd lede
 rm -rf files
 cp -r ../files .
 
+# [关键] 从 tools-y 移除 erofs-utils：
+# 本固件用 squashfs（CONFIG_TARGET_ROOTFS_EROFS 未启用），不需要 mkfs.erofs；
+# 而 erofs-utils 源码站 git.kernel.org 在 GitHub Actions 上频繁超时导致构建失败。
+# 移除它是安全的，且能彻底绕开该顽固工具。
+if grep -q '^tools-y += erofs-utils$' tools/Makefile; then
+    sed -i '/^tools-y += erofs-utils$/d' tools/Makefile
+    echo "  removed erofs-utils from tools-y (squashfs image does not need it)"
+fi
+
 # ---------------------------------------------------------------------------
 # [3] feeds
 # ---------------------------------------------------------------------------
