@@ -32,6 +32,8 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup environment
         run: |
+          # 仓库文件通过 API 上传，不带可执行位，这里显式赋权
+          chmod +x install-env.sh prepare.sh build.sh
           sudo ./install-env.sh
       - name: Prepare
         run: |
