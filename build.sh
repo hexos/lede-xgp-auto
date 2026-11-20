@@ -153,5 +153,15 @@ else
     echo "  ERROR: TD-TECH patch not reflected in option.c"; exit 1
 fi
 
-echo "== make =="
-make V=0 -j$(nproc) || { echo "make failed"; exit 1; }
+echo "== make (verbose to log) =="
+if make -j$(nproc) V=s > /tmp/lede_build.log 2>&1; then
+    echo "make OK"
+    tail -20 /tmp/lede_build.log
+else
+    echo "========== make FAILED - errors =========="
+    grep -inE "error:|Error [0-9]|undefined reference|No such file|implicit declaration|make.*failed" /tmp/lede_build.log | tail -60
+    echo "========== make FAILED - last 200 lines =========="
+    tail -200 /tmp/lede_build.log
+    echo "=============================================="
+    exit 1
+fi
