@@ -97,6 +97,17 @@ clone_or_pull https://github.com/derisamedia/luci-theme-alpha.git       package/
 clone_or_pull https://github.com/zzzz0317/kmod-fb-tft-gc9307.git        package/zz/kmod-fb-tft-gc9307
 clone_or_pull https://github.com/zzzz0317/xgp-v3-screen.git             package/zz/xgp-v3-screen
 
+# [关键修复] gc9307 自带的 fbtft.h 用了 .remove_new，但 coolsnowwolf/lede master
+# 的 6.18 内核 struct platform_driver 没有该成员（只有 .remove），导致编译报错：
+#   fbtft.h:333:10: error: 'struct platform_driver' has no member named 'remove_new'
+# 这里把 .remove_new 改为 .remove（与同文件 FBTFT_SPI_DRIVER 宏的写法一致）。
+# 放在 clone/pull 之后，确保每次 prepare 都重新应用（git reset --hard 会还原修改）。
+GC_FBTFT="package/zz/kmod-fb-tft-gc9307/src/fbtft.h"
+if [ -f "$GC_FBTFT" ] && grep -q '\.remove_new' "$GC_FBTFT"; then
+    sed -i 's/\.remove_new[[:space:]]*=/.remove =/g' "$GC_FBTFT"
+    echo "  patched gc9307 fbtft.h: .remove_new -> .remove"
+fi
+
 # ---------------------------------------------------------------------------
 # [5] [新增] at-webserver (UBUS 版) 源码
 #     0x4ba fork：含「LuCI 缺少 UBUS 选项」「串口配置不生效」修复，与 ubus 版一致。
