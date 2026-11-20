@@ -26,10 +26,21 @@ cat >> .config <<'EOF'
 # --- injected by hexos/lede-xgp-auto ---
 CONFIG_PACKAGE_at-webserver=y
 CONFIG_PACKAGE_luci-app-at-webserver=y
+
+# --- 关闭与 master 最新 feeds 冲突的包 ---
+# sms-forwarder 与 QModem 新引入的 sms-forwarder-next 抢同一文件 /etc/init.d/sms_forwarder
+# CONFIG_PACKAGE_sms-forwarder is not set
 EOF
 
 echo "== make defconfig =="
 make defconfig || { echo "defconfig failed"; exit 1; }
+
+# defconfig 后再次强制关闭（防止被依赖/DEFAULT 重新打开）
+if grep -q "CONFIG_PACKAGE_sms-forwarder=y" .config; then
+    echo "  force-disable CONFIG_PACKAGE_sms-forwarder"
+    ./scripts/config -d PACKAGE_sms-forwarder
+    make defconfig >/dev/null 2>&1 || true
+fi
 
 # 校验关键配置生效
 grep -Fxq "CONFIG_TARGET_rockchip_armv8_DEVICE_nlnet_xiguapi-v3=y" .config || { echo "ERROR: device config missing"; exit 1; }
