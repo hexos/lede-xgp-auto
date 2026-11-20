@@ -97,6 +97,16 @@ clone_or_pull https://github.com/derisamedia/luci-theme-alpha.git       package/
 clone_or_pull https://github.com/zzzz0317/kmod-fb-tft-gc9307.git        package/zz/kmod-fb-tft-gc9307
 clone_or_pull https://github.com/zzzz0317/xgp-v3-screen.git             package/zz/xgp-v3-screen
 
+# [关键修复] luci-theme-alpha（derisamedia 新版）依赖不存在的 luci-app-alpha-config，
+# 导致 package/install 阶段报 "cannot find dependency luci-app-alpha-config" 安装失败。
+# 去掉该依赖，只保留 libc（主题本身不需要那个 app）。
+# 放在 clone/pull 之后，确保每次 prepare 都重新应用。
+ALPHA_MK="package/zz/luci-theme-alpha/Makefile"
+if [ -f "$ALPHA_MK" ] && grep -q 'luci-app-alpha-config' "$ALPHA_MK"; then
+    sed -i 's/+libc +luci-app-alpha-config/+libc/' "$ALPHA_MK"
+    echo "  patched luci-theme-alpha: removed missing luci-app-alpha-config dependency"
+fi
+
 # [关键修复] gc9307 自带的 fbtft.h 用了 .remove_new，但 coolsnowwolf/lede master
 # 的 6.18 内核 struct platform_driver 没有该成员（只有 .remove），导致编译报错：
 #   fbtft.h:333:10: error: 'struct platform_driver' has no member named 'remove_new'
